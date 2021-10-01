@@ -1,5 +1,4 @@
 import * as React from "react";
-import * as wasm from "wasm-rust-dev-server";
 import Header from "./components/Header/Header";
 import ReactDOM from "react-dom";
 
