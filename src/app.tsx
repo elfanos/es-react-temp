@@ -1,5 +1,6 @@
 import * as React from "react";
 import * as wasm from "wasm-rust-dev-server";
+import Header from "./components/Header/Header";
 import ReactDOM from "react-dom";
 
 const HelloWorld = () => {
@@ -13,7 +14,11 @@ const HelloWorld = () => {
       clearTimeout(timeout);
     };
   }, [counter]);
-  return <h1>hedd{counter}</h1>;
+  return (
+    <h1>
+      hedd{counter} <Header />
+    </h1>
+  );
 };
 
 ReactDOM.render(<HelloWorld />, document.getElementById("root"));

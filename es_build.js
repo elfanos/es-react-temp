@@ -1,16 +1,32 @@
 const http = require("http");
 const express = require("express");
+const fs = require("fs");
 const esbuild = require("esbuild");
 const path = require("path");
 const EventEmitter = require("events");
 
 const serverEmitter = new EventEmitter();
-const BUILD_DONE = "BUILD_DONE";
 const REBUILD_DONE = "REBUILD_DONE";
 const PORT = 3000;
 
 const PUBLIC_DIR_PUBLIC = path.join(__dirname, "public");
-const PUBLIC_DIR = path.join(__dirname, "views");
+
+/**
+ * Inject emotion to each component,
+ * / `/** @jsx jsx` needed for emotion to know how to parse the component see: https://emotion.sh/docs/introduction
+ */
+const injectEmotion = {
+  name: "injectEmotion",
+  setup(build) {
+    build.onLoad({ filter: /\.tsx$/ }, async (args) => {
+      let content = await fs.promises.readFile(args.path, "utf8");
+      return {
+        contents: "/** @jsx jsx */ \n".concat(content),
+        loader: "tsx",
+      };
+    });
+  },
+};
 
 const build = esbuild
   .build({
@@ -18,6 +34,8 @@ const build = esbuild
     sourcemap: "external",
     write: true,
     loader: { ".wasm": "binary" },
+    plugins: [injectEmotion],
+    inject: ["./src/emotion.js"],
     outfile: path.join(PUBLIC_DIR_PUBLIC, "bundle.js"),
     bundle: true,
     // hot reloader, send a event from express whenever serverEmitter has gotten a reBuild from esbuild watch
@@ -61,14 +79,15 @@ app.get("/events", async (req, res) => {
 
   // Tell the client to retry every 10 seconds if connectivity is lost
   res.write("retry: 10000\n\n");
+  // emit to the client that a new version of the code as been updated
   serverEmitter.once(REBUILD_DONE, (error) => {
     if (!error) {
+      // Make the client to reload
       res.write(`data: reload\n\n`);
     }
   });
 });
 app.get("*", function (req, res) {
-  console.log("hello");
   res.sendFile(path.join(PUBLIC_DIR_PUBLIC, "index.html"));
 });
 
